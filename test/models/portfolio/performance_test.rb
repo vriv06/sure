@@ -705,7 +705,7 @@ class Portfolio::PerformanceTest < ActiveSupport::TestCase
     assert_includes warm.cache_key, "_#{Portfolio::Performance::CACHE_VERSION}_"
     refute_equal "v7", Portfolio::Performance::CACHE_VERSION, "v7 entries were cached without the flag"
     refute_equal "v8", Portfolio::Performance::CACHE_VERSION, "v8 entries were cached before family scoping and the one-day TWR change"
-    refute_equal "v9", Portfolio::Performance::CACHE_VERSION, "v9 entries on this branch were cached before family scoping and the one-day TWR change"
+    refute_equal "v9", Portfolio::Performance::CACHE_VERSION, "v9 entries predate income by security, so their income has no by_security"
   end
 
   # End to end, with nothing set by hand between the layers. Every other
