@@ -120,15 +120,28 @@ class RecurringTransaction::ChargePosterTest < ActiveSupport::TestCase
     end
   end
 
+  # A sync already running absorbs a second request without rereading the
+  # ledger, so charges posted while it runs would be left out of the balance.
+  test "charging several bills on one card asks for its sync once, after all of them" do
+    first = card_bill(amount: 300, first_due_on: @today)
+    second = card_bill(amount: 200, first_due_on: @today, name: "Speakers")
+
+    Account.any_instance.expects(:sync_later).once
+
+    assert_difference -> { @card.entries.count }, 2 do
+      ChargePoster.post_all!([ first, second ])
+    end
+  end
+
   private
     # Declared with the flag off and opted in without callbacks, so each test
     # drives the poster itself. `on_create: true` declares it already opted in.
-    def card_bill(amount:, first_due_on:, auto_charge: true, account: @card, on_create: false)
+    def card_bill(amount:, first_due_on:, auto_charge: true, account: @card, on_create: false, name: "Turntable")
       bill = RecurringTransaction::DeclaredBill.new(
         family: @family,
         user: users(:family_admin),
         attrs: {
-          name: "Turntable", amount: amount.to_s, account_id: account.id,
+          name: name, amount: amount.to_s, account_id: account.id,
           category_id: categories(:food_and_drink).id,
           frequency_preset: "monthly", first_due_on: first_due_on.to_s,
           auto_charge: on_create ? "1" : "0"

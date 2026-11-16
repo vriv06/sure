@@ -23,12 +23,22 @@ class RecurringTransaction
         series.account.credit_card? && !series.account.linked?
     end
 
+    # Posts every series' due charges, then asks each card for one sync. A
+    # sync already running absorbs a second request without rereading the
+    # ledger, so syncing per series would leave the later charges out of the
+    # balance.
+    def self.post_all!(all_series, as_of: Date.current)
+      charged = all_series.select { |series| new(series).post_due!(as_of: as_of, sync: false).positive? }
+      charged.map(&:account).uniq.each(&:sync_later)
+      charged.size
+    end
+
     # Returns the number of charges posted.
-    def post_due!(as_of: Date.current)
+    def post_due!(as_of: Date.current, sync: true)
       return 0 unless self.class.eligible?(series)
 
       posted = due_occurrences(as_of).count { |occurrence| post!(occurrence) }
-      series.account.sync_later if posted.positive?
+      series.account.sync_later if sync && posted.positive?
       posted
     end
 

@@ -33,8 +33,11 @@ class GenerateRecurringOccurrencesJob < ApplicationJob
       RecurringTransaction::Pipeline.with_family_lock(family_id) do
         family.recurring_transactions.active.includes(:recurrence_rules).find_each do |series|
           RecurringTransaction::OccurrenceGenerator.new(series).generate!
-          RecurringTransaction::ChargePoster.new(series).post_due!
         end
+
+        RecurringTransaction::ChargePoster.post_all!(
+          family.recurring_transactions.active.where(auto_charge: true).includes(:account)
+        )
       end
     end
 end
