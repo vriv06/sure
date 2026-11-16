@@ -93,7 +93,7 @@
       <p class="text-sm text-secondary text-center mb-2"><%= t(".unused") %></p>
 
       <p data-donut-chart-target="amount" class="text-3xl font-medium text-primary privacy-sensitive whitespace-nowrap">
-        <%= format_money(budget.available_to_spend_money) %>
+        <%= format_money(budget.unused_after_bills_money) %>
       </p>
     </div>
   </div>

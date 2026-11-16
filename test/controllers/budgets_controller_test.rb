@@ -40,6 +40,9 @@ class BudgetsControllerTest < ActionDispatch::IntegrationTest
 
     assert_response :success
     assert_select "##{ActionView::RecordIdentifier.dom_id(budget_category)} [data-testid=reserved-bar]"
+    # The hover figure for the unused segment is the segment's own amount.
+    assert_select "#segment_unused p[data-donut-chart-target=amount]",
+                  text: Budget.find(budget.id).unused_after_bills_money.format
     assert_select "#segment_reserved_#{budget_category.id}" do
       assert_select "p", text: I18n.t("budgets.budget_donut.reserved_by_bills", category: category.name)
     end

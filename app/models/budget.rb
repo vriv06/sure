@@ -20,6 +20,7 @@ class Budget < ApplicationRecord
   validates :start_date, :end_date, uniqueness: { scope: [ :family_id, :user_id ] }
 
   monetize :available_cash, :earmarked_for_goals, :free_cash
+  monetize :unused_after_bills
   monetize :budgeted_spending, :allocated_spending,
            :actual_spending, :available_to_spend, :available_to_allocate,
            :estimated_spending, :estimated_income, :actual_income, :remaining_expected_income,
@@ -395,14 +396,17 @@ class Budget < ApplicationRecord
     end
     segments.concat(reserved)
 
-    # What bills reserve comes out of what is left, so the ring still closes
-    # at the budgeted amount.
-    unused = available_to_spend - reserved.sum { |segment| segment[:amount] }
-    if unused.positive?
-      segments.push({ color: "var(--budget-unallocated-fill)", amount: unused, id: unused_segment_id })
+    if unused_after_bills.positive?
+      segments.push({ color: "var(--budget-unallocated-fill)", amount: unused_after_bills, id: unused_segment_id })
     end
 
     segments
+  end
+
+  # What is left once open bills take their share: bills reserve out of what
+  # is unspent, so the ring still closes at the budgeted amount.
+  def unused_after_bills
+    available_to_spend - donut_reserved_segments.sum { |segment| segment[:amount] }
   end
 
   # One faded segment per top-level category with open bills in the period,

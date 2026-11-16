@@ -62,6 +62,7 @@ class BudgetCategoryTest < ActiveSupport::TestCase
     assert_equal 0.4, reserved[:opacity]
     assert_nil segments["reserved_#{@subcategory_inheriting_bc.id}"], "a subcategory rolls up into its parent"
     assert_equal @budget.available_to_spend - 150, segments["unused"][:amount]
+    assert_equal @budget.available_to_spend - 150, @budget.unused_after_bills
   end
 
   test "the donut of a budget with no amounts yet still shows what bills reserve" do
