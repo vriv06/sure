@@ -6,6 +6,15 @@
 <% today = as_of %>
 <% card = account.credit_card %>
 
+<%# Installments an auto-charge plan has not charged yet are part of the
+    balance in the page header but of no statement, so the split below would
+    otherwise not add up to it. %>
+<% if account.installments_outstanding.positive? %>
+  <p class="text-sm text-secondary pb-3 privacy-sensitive">
+    <%= t(".installments_outstanding", amount: format_money(account.installments_outstanding_money)) %>
+  </p>
+<% end %>
+
 <% if (summary = card.statement_summary(as_of: today, viewer: Current.user)) %>
   <% due_for_last_balance = summary.due_date.present? && summary.due_date == summary.last_due_date %>
   <% show_apr = card.apr.present? %>

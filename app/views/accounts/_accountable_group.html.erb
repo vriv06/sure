@@ -78,7 +78,7 @@
           </div>
 
           <div class="ml-auto text-right grow h-10">
-            <%= tag.p format_money(account.balance_money), class: "text-sm font-medium text-primary whitespace-nowrap privacy-sensitive" %>
+            <%= tag.p format_money(account.total_balance_money), class: "text-sm font-medium text-primary whitespace-nowrap privacy-sensitive" %>
             <%= turbo_frame_tag dom_id(account, :sparkline),
                                 src: sparkline_account_path(account, v: sidebar_sparkline_versions(Current.family)[account.id]),
                                 loading: "lazy",

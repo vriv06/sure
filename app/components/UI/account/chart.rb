@@ -117,7 +117,7 @@ class UI::Account::Chart < ApplicationComponent
   def view_balance_money
     case view
     when "balance"
-      account.balance_money
+      account.total_balance_money
     when "holdings_balance"
       holdings_value_money
     when "cash_balance"

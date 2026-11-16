@@ -11,6 +11,29 @@ class AccountsControllerTest < ActionDispatch::IntegrationTest
     @account = accounts(:depository)
   end
 
+  test "a card shows its balance with the installments still to be charged" do
+    card = accounts(:credit_card)
+    card.update!(balance: 1000)
+    card.credit_card.update!(statement_close_day: 10, due_day: 28)
+    bill = RecurringTransaction::DeclaredBill.new(
+      family: @user.family, user: @user,
+      attrs: { name: "Turntable", amount: "100", account_id: card.id, frequency_preset: "monthly",
+               first_due_on: (Date.current + 5).to_s, auto_charge: "1" }
+    ).build
+    bill.assign_attributes(bill_type: "installment", end_mode: "after_count", end_after_count: 3)
+    assert RecurringTransaction::DeclaredBill.save(bill)
+
+    get account_url(card)
+
+    assert_response :success
+    assert_includes response.body, "$1,300.00"
+    assert_includes response.body, I18n.t("credit_cards.tabs.overview.installments_outstanding", amount: "$300.00")
+
+    get accounts_url
+
+    assert_includes response.body, "$1,300.00"
+  end
+
   test "should get index" do
     get accounts_url
     assert_response :success

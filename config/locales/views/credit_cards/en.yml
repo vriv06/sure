@@ -69,6 +69,7 @@ en:
         scheduled_payment: Scheduled payment %{amount} on %{date}
         since_last_statement: Since Last Statement
         statement_balance: Statement Balance
+        installments_outstanding: "The balance includes %{amount} of installments that have not been charged yet."
         status_paid: Paid
         status_partial: Partially paid
         multi_currency_unavailable: This statement adds up entries recorded in more

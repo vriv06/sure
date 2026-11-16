@@ -104,9 +104,9 @@ class BalanceSheet::AccountTotals
     # shows its own balance, and the page says the currency is missing.
     # @return [BigDecimal] balance in the family's currency
     def converted_balance_for(account)
-      return account.balance if account.currency == family.currency
+      return account.total_balance if account.currency == family.currency
 
       rate = exchange_rates[account.currency]
-      rate ? account.balance * rate : BigDecimal(0)
+      rate ? account.total_balance * rate : BigDecimal(0)
     end
 end
