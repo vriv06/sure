@@ -109,6 +109,8 @@ en:
       payment_url_hint: Where you go to pay this bill. Opens in a new tab from your recurring and upcoming lists.
       autopay_label: Pays automatically
       autopay_hint: Keep it on your bills list, but stop treating it as something to do.
+      auto_charge_label: Charge it to the card
+      auto_charge_hint: On a manual credit card, record each charge as a transaction on its date. For an installment plan, the charges still to come count toward the card's balance.
       more_options: More options
       notes_label: Notes
       notes_placeholder: Account 4821, charged to the Amex

@@ -24,6 +24,9 @@ class RecurringTransaction
       # occurrence generation doesn't issue one query per series (N+1).
       family.recurring_transactions.active.includes(:recurrence_rules).find_each do |series|
         OccurrenceGenerator.new(series).generate!
+        # Ahead of the matcher, so a card bill's own charge closes its
+        # occurrence before anything else is weighed against it.
+        ChargePoster.new(series).post_due!
       end
 
       matcher = Matcher.new(family)

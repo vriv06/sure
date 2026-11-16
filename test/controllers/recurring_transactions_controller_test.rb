@@ -137,6 +137,32 @@ class RecurringTransactionsControllerTest < ActionDispatch::IntegrationTest
     assert_equal 12.5, bill.amount
   end
 
+  test "create can opt a card bill into automatic charges" do
+    post recurring_transactions_url, params: {
+      recurring_transaction: {
+        name: "Turntable", amount: "300", account_id: accounts(:credit_card).id,
+        first_due_on: (Date.current + 9).iso8601, frequency_preset: "monthly", auto_charge: "1"
+      }
+    }
+
+    assert @family.recurring_transactions.find_by!(name: "Turntable").auto_charge?
+  end
+
+  test "update can turn automatic charges on" do
+    assert_not @recurring_transaction.auto_charge?
+
+    patch recurring_transaction_url(@recurring_transaction),
+      params: { recurring_transaction: { auto_charge: "1" } }
+
+    assert @recurring_transaction.reload.auto_charge?
+  end
+
+  test "the bill form offers automatic charges" do
+    get new_recurring_transaction_url, headers: { "Turbo-Frame" => "modal" }
+
+    assert_select "input[name=?]", "recurring_transaction[auto_charge]"
+  end
+
   test "edit renders the form" do
     get edit_recurring_transaction_url(@recurring_transaction)
 

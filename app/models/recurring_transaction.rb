@@ -82,6 +82,8 @@ class RecurringTransaction < ApplicationRecord
   after_commit :regenerate_future_occurrences, on: :update, if: :schedule_shape_changed?
   before_save :preserve_detected_name, if: -> { name_changed? && name_was.present? && matcher_hints.to_h["detected_name"].blank? }
   after_commit :pin_amount_on_dates_already_due, on: :update, if: :saved_change_to_amount?
+  # Last, so the occurrences the callbacks above generate exist to be charged.
+  after_commit :post_due_charges, on: %i[create update], if: :auto_charge?
 
   # Form state for the frequency picker and the create-bill dialog;
   # FrequencyPreset and the controller translate these on save. Not persisted.
@@ -202,6 +204,10 @@ class RecurringTransaction < ApplicationRecord
 
   def generate_occurrences
     OccurrenceGenerator.new(self).generate!
+  end
+
+  def post_due_charges
+    ChargePoster.new(self).post_due!
   end
 
   # Links what a bill already paid before it was a bill. Every route that

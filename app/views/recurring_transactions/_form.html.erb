@@ -205,6 +205,14 @@
           </div>
           <%= f.toggle :autopay %>
         </div>
+
+        <div class="flex items-start justify-between gap-4">
+          <div>
+            <p class="text-sm font-medium text-primary"><%= t(".auto_charge_label") %></p>
+            <p class="text-xs text-secondary"><%= t(".auto_charge_hint") %></p>
+          </div>
+          <%= f.toggle :auto_charge %>
+        </div>
       <% end %>
       <div class="space-y-2">
         <%= f.text_area :notes,
