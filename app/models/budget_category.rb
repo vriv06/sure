@@ -9,6 +9,12 @@ class BudgetCategory < ApplicationRecord
     bills_reservation.first
   end
 
+  # The same for a top-level category and everything under it, which is the
+  # level the budget donut draws.
+  def bills_reserved_with_subcategories
+    subcategories.sum(bills_reserved) { |subcategory| subcategory.bills_reserved }
+  end
+
   # Obligations in this period with no rate into the budget currency. Counted
   # and reported rather than dropped: a reservation that silently omits money
   # reads as money the user still has free to spend.

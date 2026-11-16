@@ -19,6 +19,29 @@ class BudgetsControllerTest < ActionDispatch::IntegrationTest
     assert_response :success
   end
 
+  test "show gives the donut a hover panel for what bills reserve" do
+    family = @user.family
+    budget = Budget.find_or_bootstrap(family, start_date: Date.current)
+    category = categories(:food_and_drink)
+    bill = family.recurring_transactions.create!(
+      name: "Storage unit", account: accounts(:depository), amount: 40, currency: budget.currency,
+      bill_type: "bill", category_id: category.id, expected_day_of_month: budget.end_date.day,
+      anchor_date: budget.end_date, last_occurrence_date: budget.end_date,
+      next_expected_date: budget.end_date, status: "active", manual: true
+    )
+    bill.recurring_occurrences.destroy_all
+    bill.recurring_occurrences.create!(family: family, original_due_on: budget.end_date, due_on: budget.end_date,
+                                       currency: budget.currency, expected_amount: 40)
+    budget_category = budget.budget_categories.find_by!(category: category)
+
+    get budget_url(Budget.date_to_param(Date.current))
+
+    assert_response :success
+    assert_select "#segment_reserved_#{budget_category.id}" do
+      assert_select "p", text: I18n.t("budgets.budget_donut.reserved_by_bills", category: category.name)
+    end
+  end
+
   test "show renders when the budget has spending but no expected income" do
     budgets(:one).update!(budgeted_spending: 4000, expected_income: nil)
 

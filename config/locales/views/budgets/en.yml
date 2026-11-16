@@ -9,6 +9,7 @@ en:
       new_budget: "New budget"
       of_budget: "of %{amount}"
       unused: "Unused"
+      reserved_by_bills: "%{category} · reserved by bills"
     budget_header:
       today: "Today"
     budget_nav:

@@ -130,6 +130,8 @@ export default class extends Controller {
         if (b.id === this.overageSegmentIdValue) return 1;
         if (a.id === this.unusedSegmentIdValue) return 1;
         if (b.id === this.unusedSegmentIdValue) return -1;
+        // Reserved (forecast) segments follow everything already spent.
+        if (Boolean(a.reserved) !== Boolean(b.reserved)) return a.reserved ? 1 : -1;
         return b.amount - a.amount;
       });
   }
@@ -270,7 +272,7 @@ export default class extends Controller {
       });
   }
 
-  #transformRingColor = ({ data: { id, color } }) => {
+  #transformRingColor = ({ data: { id, color, opacity } }) => {
     if (id === this.unusedSegmentIdValue || id === this.overageSegmentIdValue) {
       return color;
     }
@@ -279,7 +281,9 @@ export default class extends Controller {
     // CSS variables can't be parsed, so they reach the fill as written.
     if (!reducedOpacityColor) return color;
 
-    reducedOpacityColor.opacity = this.segmentOpacityValue;
+    // A segment may carry its own opacity (a forecast drawn fainter than
+    // what was spent); it scales the ring's.
+    reducedOpacityColor.opacity = this.segmentOpacityValue * (opacity ?? 1);
     return reducedOpacityColor;
   };
 

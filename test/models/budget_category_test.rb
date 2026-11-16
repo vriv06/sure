@@ -49,6 +49,36 @@ class BudgetCategoryTest < ActiveSupport::TestCase
     )
   end
 
+  test "the donut shows what bills reserve as a faded segment per top-level category" do
+    reserve!(category: @subcategory_inheriting, amount: 120)
+    reserve!(category: @parent_category, amount: 30)
+    @budget.update!(budgeted_spending: 2000)
+
+    segments = @budget.to_donut_segments_json.index_by { |segment| segment[:id] }
+    reserved = segments["reserved_#{@parent_budget_category.id}"]
+
+    assert_equal 150, reserved[:amount]
+    assert_equal @parent_category.color, reserved[:color]
+    assert_equal 0.7, reserved[:opacity]
+    assert_nil segments["reserved_#{@subcategory_inheriting_bc.id}"], "a subcategory rolls up into its parent"
+    assert_equal @budget.available_to_spend - 150, segments["unused"][:amount]
+  end
+
+  test "the donut of a budget with no amounts yet still shows what bills reserve" do
+    reserve!(category: @parent_category, amount: 30)
+    @budget.update!(budgeted_spending: nil)
+
+    segments = @budget.to_donut_segments_json
+
+    assert_equal [ "reserved_#{@parent_budget_category.id}" ], segments.pluck(:id)
+  end
+
+  test "the donut is unchanged when no bill reserves anything" do
+    @budget.update!(budgeted_spending: 2000)
+
+    assert_empty @budget.to_donut_segments_json.select { |segment| segment[:id].to_s.start_with?("reserved_") }
+  end
+
   # A reservation that silently omits an obligation reads as money still free to
   # spend, so one with no rate is counted and reported instead of skipped.
   test "bills_reserved counts an obligation it cannot convert" do
@@ -595,6 +625,23 @@ class BudgetCategoryTest < ActiveSupport::TestCase
 
     BudgetCategory.move_allocation!(from: @parent_budget_category, to: destination, amount: 10)
   end
+
+  private
+    # One open bill occurrence of `amount` inside the budget period.
+    def reserve!(category:, amount:)
+      bill = @family.recurring_transactions.create!(
+        name: "Bill #{SecureRandom.hex(3)}", account: accounts(:depository), amount: amount,
+        currency: "USD", bill_type: "bill", category_id: category.id,
+        expected_day_of_month: 3, anchor_date: @budget.start_date,
+        last_occurrence_date: @budget.start_date, next_expected_date: @budget.start_date,
+        status: "active", manual: true
+      )
+      bill.recurring_occurrences.destroy_all
+      bill.recurring_occurrences.create!(
+        family: @family, original_due_on: @budget.start_date + 3,
+        due_on: @budget.start_date + 3, currency: "USD", expected_amount: amount
+      )
+    end
 end
 
 class BudgetCategoryRolloverTest < ActiveSupport::TestCase

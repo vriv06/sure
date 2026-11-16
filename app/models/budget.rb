@@ -376,21 +376,45 @@ class Budget < ApplicationRecord
     self.class.date_to_param(next_date)
   end
 
+  # Opacity of a segment for money bills have reserved but nobody has spent:
+  # the category's own colour, faded, so it reads as that category's forecast.
+  RESERVED_SEGMENT_OPACITY = 0.7
+
   def to_donut_segments_json
     unused_segment_id = "unused"
+    reserved = donut_reserved_segments
 
-    # Continuous gray segment for empty budgets
-    return [ { color: "var(--budget-unallocated-fill)", amount: 1, id: unused_segment_id } ] unless allocations_valid?
+    # Continuous gray segment for empty budgets, unless bills already claim
+    # part of the period: a budget nobody has filled in yet still has those.
+    unless allocations_valid?
+      return reserved.presence || [ { color: "var(--budget-unallocated-fill)", amount: 1, id: unused_segment_id } ]
+    end
 
     segments = donut_budget_categories.map do |bc|
       { color: bc.category.color, amount: budget_category_actual_spending(bc), id: bc.id }
     end
+    segments.concat(reserved)
 
-    if available_to_spend.positive?
-      segments.push({ color: "var(--budget-unallocated-fill)", amount: available_to_spend, id: unused_segment_id })
+    # What bills reserve comes out of what is left, so the ring still closes
+    # at the budgeted amount.
+    unused = available_to_spend - reserved.sum { |segment| segment[:amount] }
+    if unused.positive?
+      segments.push({ color: "var(--budget-unallocated-fill)", amount: unused, id: unused_segment_id })
     end
 
     segments
+  end
+
+  # One faded segment per top-level category with open bills in the period,
+  # its subcategories' bills rolled up into it as their spending is.
+  def donut_reserved_segments
+    budget_categories.reject(&:subcategory?).filter_map do |bc|
+      amount = bc.bills_reserved_with_subcategories.amount
+      next unless amount.positive?
+
+      { color: bc.category.color, amount: amount, id: "reserved_#{bc.id}",
+        opacity: RESERVED_SEGMENT_OPACITY, reserved: true }
+    end
   end
 
   def donut_budget_categories
