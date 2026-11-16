@@ -39,10 +39,16 @@
 
       <%# Progress Bar %>
       <div class="mb-3">
-        <div class="h-1.5 bg-container-inset rounded-full overflow-hidden">
+        <div class="h-1.5 bg-container-inset rounded-full overflow-hidden flex">
           <% bar_color = budget_category.over_budget? ? "bg-destructive" : (budget_category.near_limit? ? "bg-warning" : "bg-success") %>
           <div class="h-full <%= bar_color %> rounded-full transition-all duration-500"
             style="inline-size: <%= budget_category.bar_width_percent %>%"></div>
+          <%# What open bills still reserve: the same bar, faded, as on the donut. %>
+          <% if (reserved_width = budget_category.reserved_bar_width_percent).positive? %>
+            <div class="h-full <%= bar_color %> opacity-40 rounded-full transition-all duration-500"
+              data-testid="reserved-bar"
+              style="inline-size: <%= reserved_width %>%"></div>
+          <% end %>
         </div>
       </div>
 

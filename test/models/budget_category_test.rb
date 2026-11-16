@@ -59,7 +59,7 @@ class BudgetCategoryTest < ActiveSupport::TestCase
 
     assert_equal 150, reserved[:amount]
     assert_equal @parent_category.color, reserved[:color]
-    assert_equal 0.7, reserved[:opacity]
+    assert_equal 0.4, reserved[:opacity]
     assert_nil segments["reserved_#{@subcategory_inheriting_bc.id}"], "a subcategory rolls up into its parent"
     assert_equal @budget.available_to_spend - 150, segments["unused"][:amount]
   end
@@ -71,6 +71,42 @@ class BudgetCategoryTest < ActiveSupport::TestCase
     segments = @budget.to_donut_segments_json
 
     assert_equal [ "reserved_#{@parent_budget_category.id}" ], segments.pluck(:id)
+  end
+
+  # The row's bar: what was spent, then what bills still reserve, both as a
+  # share of the same budget.
+  test "a category row draws what its bills reserve after what was spent" do
+    reserve!(category: @parent_category, amount: 100)
+    reserve!(category: @subcategory_with_limit, amount: 60)
+
+    assert_equal 16, @parent_budget_category.reserved_bar_width_percent, "160 of 1,000, its subcategory's included"
+    assert_equal 20, @subcategory_with_limit_bc.reserved_bar_width_percent, "60 of 300"
+  end
+
+  test "a subcategory sharing its parent's budget measures its reserve against the shared part" do
+    reserve!(category: @subcategory_inheriting, amount: 70)
+
+    assert_equal 10, @subcategory_inheriting_bc.reserved_bar_width_percent, "70 of the 700 not ring-fenced"
+  end
+
+  test "the reserved part of the bar never runs past the end" do
+    reserve!(category: @subcategory_with_limit, amount: 900)
+
+    assert_equal 100, @subcategory_with_limit_bc.reserved_bar_width_percent
+  end
+
+  test "a row with nothing reserved has no reserved bar" do
+    assert_equal 0, @parent_budget_category.reserved_bar_width_percent
+  end
+
+  # Hidden until it has spending, because an empty row says nothing. A row
+  # with bills due says something.
+  test "a subcategory sharing its parent's budget is listed once bills reserve part of it" do
+    assert_not @subcategory_inheriting_bc.visible_on_track?
+
+    reserve!(category: @subcategory_inheriting, amount: 70)
+
+    assert BudgetCategory.find(@subcategory_inheriting_bc.id).visible_on_track?
   end
 
   test "the donut is unchanged when no bill reserves anything" do

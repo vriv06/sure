@@ -298,30 +298,28 @@ class BudgetCategory < ApplicationRecord
   # zero-budget guards below apply to that effective amount, not to the
   # allocation alone: a category funded only by rollover has money to spend.
   def percent_of_budget_spent
-    if inherits_parent_budget?
-      parent = parent_budget_category
-      return 0 unless parent
+    budget_amount = spendable_budget_amount
+    return 0 if budget_amount.nil?
 
-      ring_fenced_children = parent.subcategories.reject(&:inherits_parent_budget?)
-      shared_budget = (parent[:budgeted_spending] || 0) + parent.rolled_over_amount -
-                      ring_fenced_children.sum { |child| child[:budgeted_spending] || 0 }
-      shared_budget = [ shared_budget, 0 ].max
+    return 0 if actual_spending == 0
+    return 100 if budget_amount == 0
 
-      return 0 if shared_budget == 0 && actual_spending == 0
-      return 100 if shared_budget == 0 && actual_spending > 0
-      (actual_spending.to_f / shared_budget) * 100
-    else
-      child_rollover = subcategory? ? 0 : subcategories.reject(&:inherits_parent_budget?).sum(&:rolled_over_amount)
-      budget_amount = (self[:budgeted_spending] || 0) + rolled_over_amount + child_rollover
-      return 0 if budget_amount == 0 && actual_spending == 0
-      return 0 if budget_amount > 0 && actual_spending == 0
-      return 100 if budget_amount == 0 && actual_spending > 0
-      (actual_spending.to_f / budget_amount) * 100 if budget_amount > 0 && actual_spending > 0
-    end
+    (actual_spending.to_f / budget_amount) * 100
   end
 
   def bar_width_percent
     [ percent_of_budget_spent, 100 ].min
+  end
+
+  # The share of the same bar that open bills still reserve, drawn after what
+  # was spent and never past the end. A top-level row counts its
+  # subcategories' bills, as it counts their spending.
+  def reserved_bar_width_percent
+    reserved = (subcategory? ? bills_reserved : bills_reserved_with_subcategories).amount
+    budget_amount = spendable_budget_amount
+    return 0 unless reserved.positive? && budget_amount.to_d.positive?
+
+    [ reserved.to_f / budget_amount.to_f * 100, 100 - bar_width_percent ].min.round(2)
   end
 
   def over_budget?
@@ -367,10 +365,11 @@ class BudgetCategory < ApplicationRecord
   def visible_on_track?
     return false unless on_track?
 
-    # Subcategories inheriting parent budget are hidden until they have spending.
+    # Subcategories inheriting parent budget are hidden until they have
+    # spending, or bills that will become spending.
     return true unless subcategory? && inherits_parent_budget?
 
-    actual_spending.to_d.positive?
+    actual_spending.to_d.positive? || bills_reserved.amount.positive?
   end
 
   def near_limit?
@@ -420,6 +419,24 @@ class BudgetCategory < ApplicationRecord
   end
 
   private
+    # What this row's bar measures against: its own allocation plus carry, or
+    # for a subcategory sharing its parent's budget, the part of the parent's
+    # that is not ring-fenced. nil when that parent is missing.
+    def spendable_budget_amount
+      if inherits_parent_budget?
+        parent = parent_budget_category
+        return nil unless parent
+
+        ring_fenced_children = parent.subcategories.reject(&:inherits_parent_budget?)
+        shared_budget = (parent[:budgeted_spending] || 0) + parent.rolled_over_amount -
+                        ring_fenced_children.sum { |child| child[:budgeted_spending] || 0 }
+        [ shared_budget, 0 ].max
+      else
+        child_rollover = subcategory? ? 0 : subcategories.reject(&:inherits_parent_budget?).sum(&:rolled_over_amount)
+        (self[:budgeted_spending] || 0) + rolled_over_amount + child_rollover
+      end
+    end
+
     # A foreign-currency obligation is converted, not skipped: it is still owed
     # out of this category. Only one with no rate at all falls out, and that one
     # is counted.

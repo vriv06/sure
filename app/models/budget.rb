@@ -378,7 +378,7 @@ class Budget < ApplicationRecord
 
   # Opacity of a segment for money bills have reserved but nobody has spent:
   # the category's own colour, faded, so it reads as that category's forecast.
-  RESERVED_SEGMENT_OPACITY = 0.7
+  RESERVED_SEGMENT_OPACITY = 0.4
 
   def to_donut_segments_json
     unused_segment_id = "unused"

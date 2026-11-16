@@ -33,10 +33,13 @@ class BudgetsControllerTest < ActionDispatch::IntegrationTest
     bill.recurring_occurrences.create!(family: family, original_due_on: budget.end_date, due_on: budget.end_date,
                                        currency: budget.currency, expected_amount: 40)
     budget_category = budget.budget_categories.find_by!(category: category)
+    budget.update!(budgeted_spending: 1000)
+    budget_category.update!(budgeted_spending: 200)
 
     get budget_url(Budget.date_to_param(Date.current))
 
     assert_response :success
+    assert_select "##{ActionView::RecordIdentifier.dom_id(budget_category)} [data-testid=reserved-bar]"
     assert_select "#segment_reserved_#{budget_category.id}" do
       assert_select "p", text: I18n.t("budgets.budget_donut.reserved_by_bills", category: category.name)
     end
