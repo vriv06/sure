@@ -307,7 +307,12 @@ module BillsHelper
     # bill paid three weeks after its due date reported "Overdue by 20 days"
     # directly beside its own "$11.99 of $11.99 paid" total. Once a cycle is
     # closed the only useful fact left is when it had been due.
-    return t("bills.due_label.settled", date: date) unless occurrence.scheduled?
+    unless occurrence.scheduled?
+      # A charge has no deadline to have passed: it landed on its date.
+      return date if occurrence.recurring_transaction.auto_charge?
+
+      return t("bills.due_label.settled", date: date)
+    end
 
     # Nobody is paying a bill that isn't active, so its leftover isn't late.
     # The label leads with the bill's status instead, as its page does.

@@ -345,6 +345,16 @@ class BillsHelperTest < ActionView::TestCase
     assert_equal I18n.t("bills.charged_label"), bills_paid_label(charged)
   end
 
+  # "Was due" says a deadline passed. A charge has no deadline: it landed on
+  # the card on its date, so the label is just that date.
+  test "a charged payment gives its date without calling it due" do
+    charged = build_occurrence(due_on: Date.current - 4, status: "paid", series: { auto_charge: true })
+    paid = build_occurrence(due_on: Date.current - 5, status: "paid")
+
+    assert_equal bills_upcoming_date(charged.due_on), occurrence_due_label(charged)
+    assert_equal I18n.t("bills.due_label.settled", date: bills_upcoming_date(paid.due_on)), occurrence_due_label(paid)
+  end
+
   # A plan settled in full still lists its last row this month, which read
   # "Payment 13 of 12".
   test "installment progress stops at the plan's last payment" do
