@@ -118,6 +118,7 @@ en:
         one: 1 day overdue
         other: "%{count} days overdue"
     paid_label: Paid
+    charged_label: Charged to card
     paid_over_short: Paid, over
     installment_progress: "Payment %{done_plus_one} of %{total}"
     partial_progress: "%{paid} of %{expected} paid"

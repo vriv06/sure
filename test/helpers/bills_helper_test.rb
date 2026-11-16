@@ -317,6 +317,34 @@ class BillsHelperTest < ActionView::TestCase
     assert_equal [ I18n.t("bills.attention.paused"), *facts.drop(1) ].join(" · "), bills_row_subline(occurrence)
   end
 
+  # A row is one payment of the plan, so it names its own number. Naming the
+  # plan's next payment made a settled second row read "Paid, payment 3 of 3".
+  test "a row names its own payment of the plan, not the plan's next one" do
+    stubs(:bills_span_multiple_accounts?).returns(false)
+    second = build_occurrence(due_on: Date.current - 5, status: "paid",
+                              series: { bill_type: "installment", end_mode: "after_count", end_after_count: 3,
+                                        anchor_date: Date.current - 35 })
+    series = second.recurring_transaction
+    series.recurring_occurrences.create!(family: series.family, original_due_on: Date.current - 35,
+                                         due_on: Date.current - 35, currency: "USD", expected_amount: 11.99,
+                                         status: "paid", closed_at: Time.current)
+    third = series.recurring_occurrences.create!(family: series.family, original_due_on: Date.current + 25,
+                                                 due_on: Date.current + 25, currency: "USD", expected_amount: 11.99)
+
+    assert_includes bills_row_subline(second), I18n.t("bills.installment_progress", done_plus_one: 2, total: 3)
+    assert_includes bills_row_subline(third), I18n.t("bills.installment_progress", done_plus_one: 3, total: 3)
+  end
+
+  # On a card bill that charges itself, a closed payment has reached the card;
+  # whether the card has been paid is the card's statement, not the bill's.
+  test "a closed payment of an auto-charge bill reads as charged, not paid" do
+    paid = build_occurrence(due_on: Date.current - 5, status: "paid")
+    charged = build_occurrence(due_on: Date.current - 4, status: "paid", series: { auto_charge: true })
+
+    assert_equal I18n.t("bills.paid_label"), bills_paid_label(paid)
+    assert_equal I18n.t("bills.charged_label"), bills_paid_label(charged)
+  end
+
   # A plan settled in full still lists its last row this month, which read
   # "Payment 13 of 12".
   test "installment progress stops at the plan's last payment" do

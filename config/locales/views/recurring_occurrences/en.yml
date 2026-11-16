@@ -10,6 +10,7 @@ en:
       due_on: "Due %{date}"
       paid_of: "%{paid} of %{expected} paid"
       paid_headline: "%{amount} paid"
+      charged_headline: "%{amount} charged to the card"
       remaining: "%{amount} remaining"
       settled: Paid in full
       overpaid: more than expected

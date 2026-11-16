@@ -385,7 +385,7 @@ module BillsHelper
     safe_join([
       bills_autopay_label(series),
       bills_attention_reason(occurrence, suggestion: suggestion),
-      bills_installment_progress(series),
+      bills_installment_progress(series, occurrence: occurrence),
       (t("bills.debt_payment") if series.transfer?),
       frequency_label(series),
       bills_paid_from_label(series)
@@ -393,10 +393,30 @@ module BillsHelper
   end
 
   # The payment the plan is on, capped at its last: a plan settled in full
-  # still lists its final row this month.
-  def bills_installment_progress(series)
+  # still lists its final row this month. Given a row, the payment that row
+  # is: a settled second payment is "2 of 3" whatever the plan is on now.
+  def bills_installment_progress(series, occurrence: nil)
     done, total = series.installment_progress
-    t("bills.installment_progress", done_plus_one: [ done + 1, total ].min, total: total) if total
+    return unless total
+
+    number = occurrence ? bills_installment_number(series, occurrence) : done + 1
+    t("bills.installment_progress", done_plus_one: [ number, total ].min, total: total)
+  end
+
+  # Preload-aware: the bills page loads every series' occurrences once.
+  def bills_installment_number(series, occurrence)
+    occurrences = series.recurring_occurrences
+    if occurrences.loaded?
+      occurrences.count { |other| other.original_due_on <= occurrence.original_due_on }
+    else
+      occurrences.where(original_due_on: ..occurrence.original_due_on).count
+    end
+  end
+
+  # A closed payment of a card bill that charges itself has reached the card.
+  # Whether the card has been paid is the card's statement, not the bill's.
+  def bills_paid_label(occurrence)
+    occurrence.recurring_transaction.auto_charge? ? t("bills.charged_label") : t("bills.paid_label")
   end
 
   # The rail is 56px wide, too narrow for "Jan 03, 2027", which wrapped

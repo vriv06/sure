@@ -71,7 +71,7 @@
         <% end %>
       </p>
       <% if occurrence.paid? %>
-        <p class="text-xs text-success"><%= occurrence.overpaid? ? t("bills.paid_over_short") : t("bills.paid_label") %></p>
+        <p class="text-xs text-success"><%= occurrence.overpaid? ? t("bills.paid_over_short") : bills_paid_label(occurrence) %></p>
       <% elsif occurrence.partially_paid? %>
         <%# The subline says Partial and stops there. It used to add "$1,612.50
             remaining", the same arithmetic printed twice, and that was
